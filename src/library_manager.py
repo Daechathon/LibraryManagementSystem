@@ -44,7 +44,9 @@ def get_books_in_circulation():
     val = (sort_by, )
     mycursor.execute(sql, val)
 
-    
+    selected_data = mycursor.fetchall()
+    for book in selected_data:
+        print(book[0] + ' copy#' + str(book[1]) + (' due: ' + str(book[2]) if book[2] is not None else ' -currently available'))
 
 
 def check_in_book(user_name, book_title, book_copy):
@@ -63,7 +65,6 @@ def remove_from_circulation():
     for x in results:
         print(x)
 
-    book_copy = 0
     while 1:
         book_copy = input('which copy should be removed? ')
         if book_copy == 'exit':
@@ -180,8 +181,7 @@ def add_user_param(name, gender, birthdate):
     print(name + " is now a user")
 
     mycursor.execute("SELECT UserID FROM USERS ORDER BY UserID DESC;")
-    output = mycursor.fetchone()  # returns the most recent UserID
-    mycursor.fetchall()
+    output = mycursor.fetchall()[0]  # returns the most recent UserID
     return output
 
 
