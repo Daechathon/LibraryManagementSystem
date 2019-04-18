@@ -22,7 +22,8 @@ for i in range(len(book_titles)):
 
 for i in range(len(names)):
     birthdate = random.randint(1500, 2010) * 10000 + random.randint(1, 12) * 100 + random.randint(1, 29)
-    add_user_param(names[i], ('male' if random.randint(0, 100) > 50 else 'female'), birthdate)
+    add_user_param(names[i], names[random.randint(0, len(names) - 1)],
+                   ('male' if random.randint(0, 100) > 50 else 'female'), birthdate)
 
 
 
