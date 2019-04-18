@@ -1,5 +1,7 @@
 import mysql.connector
+from datetime import date
 
+# TODO sanitize inputs
 mydb = mysql.connector.connect(
     host="localhost",
     user="library_admin",
@@ -49,7 +51,8 @@ def get_books_in_circulation():
         print(book[0] + ' copy#' + str(book[1]) + (' due: ' + str(book[2]) if book[2] is not None else ' -currently available'))
 
 
-def check_in_book(user_name, book_title, book_copy):
+def check_in_book(book_title, book_copy):
+
     return
 
 
@@ -80,16 +83,16 @@ def remove_from_circulation():
 
     sql = "DELETE FROM BOOKCOPY WHERE Title = %s and CopyNumber = %s"
     val = (book_title, book_copy)
+    mycursor.execute(sql, val)
 
     mydb.commit()
 
     print(book_title + ' copy#' + book_copy + ' has been removed')
 
 
-
 def get_books_on_loan():
 
-    sort_type = 'Title'
+    sort_type = 'BOOK.Title'
 
     ans = input('would you like to sort the results? ')
 
@@ -98,23 +101,25 @@ def get_books_on_loan():
         ans = input('would you like to sort by due date, title, or user? ')
 
         if ans[0] == 'd' or ans[0] == 'D':
-            sort_type = 'DueDate'
+            sort_type = 'HISTORIES.DueDate'
         elif ans[0] == 'u' or ans[0] == 'U':
-            sort_type = 'UserName'
+            sort_type = 'USERS.UserName'
 
-    sql = "SELECT BOOK.Title, USERS.UserName, HISTORIES.CheckoutDate, HISTORIES.DueDate" \
-          "FROM BOOK JOIN BOOKCOPY ON BOOK.Title = BOOKCOPY.Title" \
-          "JOIN HISTORIES ON HISTORIES.BookCopyID = BOOKCOPY.CopyNumber" \
-          "WHERE HISTORIES.ReturnDate == null" \
-          "ORDER BY %s"
+    sql = "SELECT BOOK.Title, USERS.UserName, HISTORIES.CheckoutDate, " \
+          "HISTORIES.DueDate FROM BOOK JOIN BOOKCOPY ON BOOK.Title = BOOKCOPY.Title " \
+          "JOIN HISTORIES ON HISTORIES.BookCopyID = BOOKCOPY.CopyNumber " \
+          "JOIN USERS ON HISTORIES.UserID = USERS.UserID WHERE HISTORIES.ReturnDate = null " \
+          "ORDER BY " + sort_type
 
-    mycursor.execute(sql, sort_type)
+    mycursor.execute(sql)
     myresult = mycursor.fetchall()
 
     print("books currently on loan: ")
 
     for x in myresult:
         print(x)
+
+    print()
 
 
 def add_book_to_circulation():
@@ -149,32 +154,91 @@ def add_book_with_params(book_title, author_name, page_count):
 
 
 def user_status_report():
-    return
+
+    sort_type = 'LastName'
+
+    ans = input('would you like to sort the results? ')
+
+    if ans[0] == 'y' or ans[0] == 'Y':
+
+        ans = input('would you like to sort by user standing or last name? ')
+
+        if ans[0] == 'l' or ans[0] == 'L':
+            sort_type = 'LoanStatus'
+
+    sql = "SELECT USER.UserLastName, USER.UserName, USER.LoanStatus, HISTORIES.BookTitle," \
+          " HISTORIES.BookCopy, HISTORIES.DueDate " \
+          "FROM USER JOIN HISTORIES ON USER.UserID = HISTORIES.UserID WHERE HISTORIES.ReturnDate = null" \
+          "ORDER BY %s"
+
+    val = (sort_type,)
+    mycursor.execute(sql, val)
+
+    result = mycursor.fetchall()
+    today = str(date.today())
+
+    for row in result:
+        print(row[0] + ", " + row[1] + " status: " + row[2] + " - " +
+              row[3] + " # " + row[4] + " due: " + row[5] +
+              " --overdue" if row[5] < today else "")
 
 
 def search():
-    return
+
+    print("title, author, publisher, date published, LOC call number, DD call number")
+    category = input('what category would you like to search by? ')
+
+    column = "Title"
+
+    if category[0] == 't' or category[0] == 'T':
+        column = "Title"
+    elif category[0] == 'a' or category[0] == 'A':
+        column = "Author"
+    elif category[0] == 'p' or category[0] == 'P':
+        column = "Publisher"
+    elif category[0] == 'd' or category[0] == 'D':
+        if category[1] == 'd' or category[1] == 'D':
+            column = "DDCallNumber"
+        else:
+            column = "PublishDate"
+    elif category[0] == 'l' or category[0] == 'L':
+        column = "LOCCallNumber"
+
+    pattern = input("pattern to search for: ")
+
+    sql = "SELECT BOOK." + column + ", BOOKCOPY.Title, BOOKCOPY.CopyNumber, BOOKCOPY.DueDate FROM BOOK JOIN" \
+          " BOOKCOPY ON BOOK.Title = BOOKCOPY.Title WHERE BOOK." + column + " LIKE '%" + pattern + "%'"
+
+    # val = (column, column)
+
+    mycursor.execute(sql)
+
+    results = mycursor.fetchall()
+
+    for i in results:
+        print(i[1] + " Copy#" + str(i[2]) + " " + ((str(i[0]) + " ") if not i[0] == i[1] else "") +
+              " -Available" if i[3] is None else " -Checked Out")
+
+    print()
 
 
 def checkout_book(librarian, user, book):
-    return
 
-
-def get_user_status_report(sort_type):
     return
 
 
 def add_user():
     name = input('what\'s the user\'s name? ')
+    last_name = input('last name? ')
     gender = input('gender? ')
     birth_date = input('birthdate? ')
-    return add_user_param(name, gender, birth_date)
+    return add_user_param(name, last_name, gender, birth_date)
 
 
-def add_user_param(name, gender, birthdate):
+def add_user_param(name, last_name, gender, birthdate):
 
-    sql = "INSERT INTO USERS(UserName, Gender, BirthDate, LoanStatus) VALUES (%s, %s, %s, 'good');"
-    val = (name, gender, birthdate)
+    sql = "INSERT INTO USERS(UserName, UserLastName, Gender, BirthDate, LoanStatus) VALUES (%s, %s, %s, %s, 'good');"
+    val = (name, last_name, gender, birthdate)
     mycursor.execute(sql, val)
 
     mydb.commit()
@@ -197,9 +261,9 @@ def add_librarian():
     print(" and a librarian")
 
 
-def add_librarian_param(name, gender, birthdate):
+def add_librarian_param(name, last_name, gender, birthdate):
 
-    user_id = add_user_param(name, gender, birthdate)
+    user_id = add_user_param(name, last_name, gender, birthdate)
 
     sql = "INSERT INTO LIBRARIANS(UserID) VALUES (%s);"
     val = (user_id, )
@@ -240,7 +304,7 @@ def main_function():
         elif input_str == 'books on loan':
             get_books_on_loan()
         elif input_str == 'user status report':
-            get_user_status_report()
+            user_status_report()
         else:
             print('invalid input')
 
