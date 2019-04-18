@@ -25,6 +25,4 @@ for i in range(len(names)):
     add_user_param(names[i], names[random.randint(0, len(names) - 1)],
                    ('male' if random.randint(0, 100) > 50 else 'female'), birthdate)
 
-
-
 mydb.commit()
