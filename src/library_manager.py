@@ -56,6 +56,11 @@ def check_in_book(book_title, book_copy):
     return
 
 
+def checkout_book(librarian, user, book):
+
+    return
+
+
 def remove_from_circulation():
     book_title = input('what book should be removed? ')
 
@@ -222,11 +227,6 @@ def search():
     print()
 
 
-def checkout_book(librarian, user, book):
-
-    return
-
-
 def add_user():
     name = input('what\'s the user\'s name? ')
     last_name = input('last name? ')
@@ -311,46 +311,3 @@ def main_function():
 
 if __name__ == '__main__':
     main_function()
-
-"""
-#get books on loan
-SELECT BOOK.Title, USERS.UserName, HISTORIES.CheckoutDate, HISTORIES.DueDate
-FROM BOOK JOIN BOOKCOPY ON BOOK.Title = BOOKCOPY.Title
-JOIN HISTORIES ON HISTORIES.BookCopyID = BOOKCOPY.CopyNumber
-WHERE HISTORIES.ReturnDate == null;
-
-
-#checkin
-UPDATE HISTORIES
-SET ReturnDate = current_date()
-WHERE UserID = UserID and BookTitle = BookTitle and BookID = BookID;
-
-
-#remove book copy from circulation
-DELETE FROM BOOKCOPY WHERE Title = Title and CopyNumber = CopyNumber;
-
-
-#add book to circulation
-if count(BOOKCOPY.Title = 0) then
-INSERT INTO BOOKCOPY VALUES (1, Title, null)
-else
-	INSERT INTO BOOKCOPY VALUES (count(bookcopy.title) + 1, Title, null)
-end else;
-
-#search
-
-
-#________________________________________ do the rest in python first
-
-#checkout
-
-
-#get books in circulation
-
-
-#get user status report
-
-
-
-
-"""
