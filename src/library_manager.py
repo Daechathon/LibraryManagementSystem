@@ -12,23 +12,6 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor()
 
-# mycursor.execute("SHOW TABLES")
-
-# sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
-# val = ("John", "Highway 21")
-# mycursor.execute(sql, val)
-#
-# mydb.commit()
-#
-# print(mycursor.rowcount, "record inserted.")
-
-
-# #implement at some point
-# if __name__ == "__main__":
-#     1
-
-# _________________________________________________________
-
 def get_books_in_circulation():
 
     sort_by = 'Title'
@@ -51,7 +34,70 @@ def get_books_in_circulation():
         print(book[0] + ' copy#' + str(book[1]) + (' due: ' + str(book[2]) if book[2] is not None else ' -currently available'))
 
 
-def check_in_book(book_title, book_copy):
+def check_in_book():
+
+    book_title = input("book title: ")
+    book_copy = input("copy number: ")
+
+    sql = "SELECT UserID FROM HISTORIES WHERE Title = %s and CopyNumber = %s and ReturnDate = null"
+    val = (book_title, book_copy)
+    mycursor.execute(sql, val)
+    user_id = mycursor.fetchall()[0][0]
+
+    sql = "UPDATE HISTORIES SET ReturnDate = %s WHERE Title = %s and CopyNumber = %s and ReturnDate = null"
+    val = (str(date.today()), book_title, book_copy)
+    mycursor.execute(sql, val)
+
+    sql = "SELECT DueDate, ReturnDate FROM HISTORIES WHERE Title = %s and CopyNumber = %s" \
+          " and UserID = %s ORDER BY ReturnDate DESC LIMIT 10"
+    val = (book_title, book_copy, user_id)
+    mycursor.execute(sql, val)
+    last_ten_returns = mycursor.fetchall()
+
+    num_overdue_books = 0
+    probation_list = []
+    status = ""
+
+    for row in last_ten_returns:
+        if row[0] < row[1]:
+            num_overdue_books += 1
+            probation_list.append(1)
+
+        else:
+            probation_list.append(0)
+
+        if len(probation_list) > 5:
+            probation_list.pop(0)
+
+    probation_sum = 0
+    for i in probation_list:
+        probation_sum += i
+
+    if num_overdue_books == 0:
+        status = "excellent"
+
+    elif probation_sum >= 2:
+        status = "probationary"
+
+    else:
+        return
+
+    sql = "UPDATE USERS SET LoanStatus = %s WHERE UserID = %s"
+    val = (status, user_id)
+    mycursor.execute(sql, val)
+
+    mydb.commit()
+
+    sql = "SELECT UserName FROM USERS WHERE UserID = %s"
+    val = (user_id,)
+    mycursor.execute(sql, val)
+
+    user_name = mycursor.fetchall()[0][0]
+
+    print(user_name + " now has a " + status + " status!")
+
+
+def checkout_book(librarian, user, book):
 
     return
 
@@ -222,11 +268,6 @@ def search():
     print()
 
 
-def checkout_book(librarian, user, book):
-
-    return
-
-
 def add_user():
     name = input('what\'s the user\'s name? ')
     last_name = input('last name? ')
@@ -311,46 +352,3 @@ def main_function():
 
 if __name__ == '__main__':
     main_function()
-
-"""
-#get books on loan
-SELECT BOOK.Title, USERS.UserName, HISTORIES.CheckoutDate, HISTORIES.DueDate
-FROM BOOK JOIN BOOKCOPY ON BOOK.Title = BOOKCOPY.Title
-JOIN HISTORIES ON HISTORIES.BookCopyID = BOOKCOPY.CopyNumber
-WHERE HISTORIES.ReturnDate == null;
-
-
-#checkin
-UPDATE HISTORIES
-SET ReturnDate = current_date()
-WHERE UserID = UserID and BookTitle = BookTitle and BookID = BookID;
-
-
-#remove book copy from circulation
-DELETE FROM BOOKCOPY WHERE Title = Title and CopyNumber = CopyNumber;
-
-
-#add book to circulation
-if count(BOOKCOPY.Title = 0) then
-INSERT INTO BOOKCOPY VALUES (1, Title, null)
-else
-	INSERT INTO BOOKCOPY VALUES (count(bookcopy.title) + 1, Title, null)
-end else;
-
-#search
-
-
-#________________________________________ do the rest in python first
-
-#checkout
-
-
-#get books in circulation
-
-
-#get user status report
-
-
-
-
-"""
