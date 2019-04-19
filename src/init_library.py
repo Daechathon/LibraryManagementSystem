@@ -39,10 +39,10 @@ mycursor.execute("CREATE TABLE IF NOT EXISTS LIBRARIANS(UserID int PRIMARY KEY, 
 print('librarians table created')
 
 # HISTORIES
-mycursor.execute("CREATE TABLE IF NOT EXISTS HISTORIES(HistoryID int, LibrarianID int, UserID int, "
+mycursor.execute("CREATE TABLE IF NOT EXISTS HISTORIES(HistoryID int PRIMARY KEY AUTO_INCREMENT, " 
+                 "LibrarianID int, UserID int, "
                  "BookTitle varchar(100), BookCopyID int, "
                  "CheckoutDate date, DueDate date, ReturnDate date,"
-                 "PRIMARY KEY (HistoryID),"
                  "CONSTRAINT HISTORYLIBRARIAN_FK FOREIGN KEY (LibrarianID) REFERENCES LIBRARIANS(UserID),"
                  "CONSTRAINT HISTORYUSER_FK FOREIGN KEY (UserID) REFERENCES USERS(UserID),"
                  "CONSTRAINT HISTORYBOOKCOPY_FK FOREIGN KEY (BookTitle, BookCopyID) "
