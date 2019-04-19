@@ -1,4 +1,5 @@
 import mysql.connector
+import datetime
 from datetime import date
 
 # TODO sanitize inputs
@@ -39,26 +40,31 @@ def check_in_book():
     book_title = input("book title: ")
     book_copy = input("copy number: ")
 
-    sql = "SELECT UserID FROM HISTORIES WHERE Title = %s and CopyNumber = %s and ReturnDate = null"
+    sql = "SELECT UserID FROM HISTORIES WHERE BookTitle = %s and BookCopyID = %s and ReturnDate IS NULL"
     val = (book_title, book_copy)
     mycursor.execute(sql, val)
     user_id = mycursor.fetchall()[0][0]
 
-    sql = "UPDATE HISTORIES SET ReturnDate = %s WHERE Title = %s and CopyNumber = %s and ReturnDate = null"
+    sql = "UPDATE HISTORIES SET ReturnDate = %s WHERE BookTitle = %s and BookCopyID = %s and ReturnDate IS NULL"
     val = (str(date.today()), book_title, book_copy)
     mycursor.execute(sql, val)
 
-    sql = "SELECT DueDate, ReturnDate FROM HISTORIES WHERE Title = %s and CopyNumber = %s" \
+    sql = "SELECT DueDate, ReturnDate FROM HISTORIES WHERE BookTitle = %s and BookCopyID = %s" \
           " and UserID = %s ORDER BY ReturnDate DESC LIMIT 10"
     val = (book_title, book_copy, user_id)
     mycursor.execute(sql, val)
     last_ten_returns = mycursor.fetchall()
+
+    for i in range(10 - len(last_ten_returns)):
+        last_ten_returns.append(())
 
     num_overdue_books = 0
     probation_list = []
     status = ""
 
     for row in last_ten_returns:
+        if len(row) == 0:
+            continue
         if row[0] < row[1]:
             num_overdue_books += 1
             probation_list.append(1)
@@ -97,9 +103,77 @@ def check_in_book():
     print(user_name + " now has a " + status + " status!")
 
 
-def checkout_book(librarian, user, book):
+def checkout_book():
+    today = date.today()
 
-    return
+    librarian_id = input("What is the librarian's ID? ")
+    user = input("Who is checking out the book? ")
+    book_title = input("What book? ")
+
+    sql = "SELECT UserID FROM USERS WHERE UserName = %s"
+    val = (user,)
+    mycursor.execute(sql, val)
+    user_list = mycursor.fetchall()
+
+    if len(user_list) > 1:
+        print()
+        for user_name in user_list:
+            print(user_name)
+
+    user_id = input("Which user? ")
+
+    sql = "SELECT LoanStatus FROM USERS WHERE UserID = %s"
+    val = (user_id,)
+    mycursor.execute(sql, val)
+    status = mycursor.fetchall()
+
+    sql = "SELECT BookTitle, DueDate FROM HISTORIES WHERE UserID = %s and ReturnDate = null"
+    val = (user_id,)
+    mycursor.execute(sql, val)
+    checked_out_books = mycursor.fetchall()
+
+    for due_date in checked_out_books:
+        if due_date[1] < today:
+            print("User must return overdue book: " + due_date[0])
+            return
+
+    max_books = 10
+    loan_time = 14
+
+    if status == "probationary":
+        max_books = 1
+    elif status == "excellent":
+        max_books = 20
+        loan_time = 28
+
+    # check for having too many books checked out
+    sql = "SELECT COUNT(*) FROM HISTORIES WHERE UserID = %s and ReturnDate = null"
+    val = (user_id,)
+    mycursor.execute(sql, val)
+    checked_out_books = mycursor.fetchall()
+
+    if checked_out_books[0][0] > max_books:
+        print("Too many books checked out! ")
+        return
+
+    sql = "SELECT CopyNumber FROM BOOKCOPY WHERE Title = %s and DueDate IS NULL LIMIT 1"
+    val = (book_title,)
+    mycursor.execute(sql, val)
+    book_copy = mycursor.fetchall()[0][0]
+
+    due_date = today + datetime.timedelta(days=loan_time)
+
+    sql = "INSERT INTO HISTORIES (LibrarianID, UserID, BookTitle, " \
+          "BookCopyID, CheckoutDate, DueDate) VALUES (%s, %s, %s, %s, %s, %s)"
+    val = (librarian_id, user_id, book_title, book_copy, today, due_date)
+    mycursor.execute(sql, val)
+
+    sql = "UPDATE BOOKCOPY SET DueDate = %s WHERE Title = %s and CopyNumber = %s"
+    val = (due_date, book_title, book_copy)
+    mycursor.execute(sql, val)
+
+    mydb.commit()
+    print("successfully checked out " + book_title + " copy#" + int(book_copy) + "\n")
 
 
 def remove_from_circulation():
